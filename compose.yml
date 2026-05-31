@@ -1,90 +1,69 @@
 services:
-  # --- CLOUDFLARE TUNNEL ---
-  # This container connects your home server to Cloudflare without opening ports.
+  # --- 1. CLOUDFLARE TUNNEL ---
+  # Think of this as a secure "phone call" from your computer to Cloudflare.
+  # It lets you share your services with the world without opening your router's firewall.
   cloudflared:
-    image: cloudflare/cloudflared:latest
-    container_name: cloudflared
-    restart: unless-stopped
-    command: tunnel --no-autoupdate run
+    image: cloudflare/cloudflared:latest # The "Blueprint" used to build the container
+    container_name: cloudflared          # The friendly name for this container
+    restart: unless-stopped              # Automatically start if the computer reboots
+    command: tunnel --no-autoupdate run  # The specific instruction for this app
     environment:
-      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN} # Uses the secret token from your .env file
     networks:
-      - cf-tunnel
+      - cf-tunnel                        # Joins the private "room" to talk to other apps
 
-  # --- DASHBOARD ---
-  # A simple home server dashboard to organize your links.
-  # Access locally via http://localhost:7575
-  # Access via tunnel: dashboard.${DOMAIN} -> http://homarr:7575
+  # --- 2. DASHBOARD (HOMARR) ---
+  # This is a website that gives you a nice UI to see all your other apps.
   homarr:
     container_name: homarr
     image: ghcr.io/ajnart/homarr:latest
     restart: unless-stopped
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock # Optional: for docker integration
+      # Volumes = "Memory". Without these, your settings vanish when the app restarts.
+      # Left side: Folder on your computer | Right side: Folder inside the container
+      - /var/run/docker.sock:/var/run/docker.sock 
       - ${DOCKER_CONFIG_DIR}/homarr/configs:/app/data/configs
       - ${DOCKER_CONFIG_DIR}/homarr/icons:/app/public/icons
       - ${DOCKER_DATA_DIR}/homarr/data:/data
     environment:
-      - PUID=${PUID}
+      - PUID=${PUID} # Tells the app which user "owns" the files (for security)
       - PGID=${PGID}
-      - TZ=${TZ}
+      - TZ=${TZ}     # Sets the clock to your local time (Utah)
     ports:
-      - "7575:7575"
+      - "7575:7575"  # Opens a "door" on your computer so you can visit http://localhost:7575
     networks:
       - cf-tunnel
 
-  # --- MEDIA STACK PLACEHOLDERS ---
-  # Uncomment these services as you need them.
-  # Remember to point Cloudflare Public Hostnames to the container names (e.g., plex:${PORT})
+  # --- 3. INTERNAL-ONLY SERVICE EXAMPLE ---
+  # This app is "hidden" from your local network because it has NO 'ports' section.
+  # It can ONLY be reached through the Cloudflare Tunnel.
+  internal-app:
+    image: crccheck/hello-world
+    container_name: internal-app
+    restart: unless-stopped
+    networks:
+      - cf-tunnel
+
+  # --- 4. MEDIA STACK PLACEHOLDERS ---
+  # These are currently "off" (commented out). 
+  # To turn them on, remove the '#' from the start of the lines.
 
   # plex:
   #   image: lscr.io/linuxserver/plex:latest
   #   container_name: plex
-  #   network_mode: host # Plex often prefers host mode for local discovery
+  #   network_mode: host 
   #   environment:
   #     - PUID=${PUID}
   #     - PGID=${PGID}
   #     - TZ=${TZ}
-  #     - VERSION=docker
   #   volumes:
   #     - ${DOCKER_CONFIG_DIR}/plex:/config
   #     - ${DOCKER_DATA_DIR}/media/movies:/movies
   #     - ${DOCKER_DATA_DIR}/media/tv:/tv
   #   restart: unless-stopped
 
-  # sonarr:
-  #   image: lscr.io/linuxserver/sonarr:latest
-  #   container_name: sonarr
-  #   environment:
-  #     - PUID=${PUID}
-  #     - PGID=${PGID}
-  #     - TZ=${TZ}
-  #   volumes:
-  #     - ${DOCKER_CONFIG_DIR}/sonarr:/config
-  #     - ${DOCKER_DATA_DIR}/media:/data
-  #   ports:
-  #     - 8989:8989
-  #   restart: unless-stopped
-  #   networks:
-  #     - cf-tunnel
-
-  # radarr:
-  #   image: lscr.io/linuxserver/radarr:latest
-  #   container_name: radarr
-  #   environment:
-  #     - PUID=${PUID}
-  #     - PGID=${PGID}
-  #     - TZ=${TZ}
-  #   volumes:
-  #     - ${DOCKER_CONFIG_DIR}/radarr:/config
-  #     - ${DOCKER_DATA_DIR}/media:/data
-  #   ports:
-  #     - 7878:7878
-  #   restart: unless-stopped
-  #   networks:
-  #     - cf-tunnel
-
 networks:
+  # This creates a private virtual network for your containers to talk to each other.
   cf-tunnel:
     name: cf-tunnel
     driver: bridge
