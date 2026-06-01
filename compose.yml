@@ -43,19 +43,20 @@ services:
 
   # --- 3. MEDIA SERVER (JELLYFIN) ---
   # Jellyfin is a free and open-source media system.
-  # It organizes your movies, shows, and music so you can stream them anywhere.
+  # We use the LinuxServer.io version because it handles file permissions very well.
   jellyfin:
     container_name: jellyfin
-    image: jellyfin/jellyfin:latest
+    image: lscr.io/linuxserver/jellyfin:latest
     restart: unless-stopped
-    user: ${PUID}:${PGID}
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
     volumes:
       - ${DOCKER_CONFIG_DIR}/jellyfin/config:/config
-      - ${DOCKER_CONFIG_DIR}/jellyfin/cache:/cache
-      - ${DOCKER_MEDIA_DIR}:/data/media:ro # ':ro' means Read-Only (safety first!)
+      - ${DOCKER_MEDIA_DIR}:/data/media:ro
     ports:
       - "8096:8096"
-      
     networks:
       - cf-tunnel
 
