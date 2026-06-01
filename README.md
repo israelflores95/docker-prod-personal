@@ -13,7 +13,7 @@ Edit `.env` and set:
 - `CLOUDFLARE_TUNNEL_TOKEN`: Your unique tunnel token.
 - `PUID`/`PGID`: Your local user IDs (run `id` in your terminal).
 
-### 2. Set Up Cloudflare Tunnel
+### 2. Set Up Cloudflare Tunneld
 1. Go to the [Cloudflare Zero Trust Dashboard](https://one.dash.cloudflare.com/).
 2. Navigate to **Networks > Tunnels**.
 3. Click **Create a Tunnel**.

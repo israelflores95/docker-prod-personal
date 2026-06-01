@@ -33,35 +33,6 @@ services:
       - "7575:7575"  # Opens a "door" on your computer so you can visit http://localhost:7575
     networks:
       - cf-tunnel
-
-  # --- 3. INTERNAL-ONLY SERVICE EXAMPLE ---
-  # This app is "hidden" from your local network because it has NO 'ports' section.
-  # It can ONLY be reached through the Cloudflare Tunnel.
-  internal-app:
-    image: crccheck/hello-world
-    container_name: internal-app
-    restart: unless-stopped
-    networks:
-      - cf-tunnel
-
-  # --- 4. MEDIA STACK PLACEHOLDERS ---
-  # These are currently "off" (commented out). 
-  # To turn them on, remove the '#' from the start of the lines.
-
-  # plex:
-  #   image: lscr.io/linuxserver/plex:latest
-  #   container_name: plex
-  #   network_mode: host 
-  #   environment:
-  #     - PUID=${PUID}
-  #     - PGID=${PGID}
-  #     - TZ=${TZ}
-  #   volumes:
-  #     - ${DOCKER_CONFIG_DIR}/plex:/config
-  #     - ${DOCKER_DATA_DIR}/media/movies:/movies
-  #     - ${DOCKER_DATA_DIR}/media/tv:/tv
-  #   restart: unless-stopped
-
 networks:
   # This creates a private virtual network for your containers to talk to each other.
   cf-tunnel:
