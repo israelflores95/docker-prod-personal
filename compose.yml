@@ -55,6 +55,7 @@ services:
       - ${DOCKER_MEDIA_DIR}:/data/media:ro # ':ro' means Read-Only (safety first!)
     ports:
       - "8096:8096"
+      
     networks:
       - cf-tunnel
 
