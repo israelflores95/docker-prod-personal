@@ -33,6 +33,31 @@ services:
       - "7575:7575"  # Opens a "door" on your computer so you can visit http://localhost:7575
     networks:
       - cf-tunnel
+    healthcheck:
+      # Fixes the "unhealthy" status by checking the correct internal port
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7575/api/health"]
+      interval: 1m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # --- 3. MEDIA SERVER (JELLYFIN) ---
+  # Jellyfin is a free and open-source media system.
+  # It organizes your movies, shows, and music so you can stream them anywhere.
+  jellyfin:
+    container_name: jellyfin
+    image: jellyfin/jellyfin:latest
+    restart: unless-stopped
+    user: ${PUID}:${PGID}
+    volumes:
+      - ${DOCKER_CONFIG_DIR}/jellyfin/config:/config
+      - ${DOCKER_CONFIG_DIR}/jellyfin/cache:/cache
+      - ${DOCKER_MEDIA_DIR}:/data/media:ro # ':ro' means Read-Only (safety first!)
+    ports:
+      - "8096:8096"
+    networks:
+      - cf-tunnel
+
 networks:
   # This creates a private virtual network for your containers to talk to each other.
   cf-tunnel:
