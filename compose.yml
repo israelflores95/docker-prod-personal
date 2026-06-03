@@ -60,6 +60,21 @@ services:
     networks:
       - cf-tunnel
 
+  sonarr:
+    container_name: sonarr
+    image: lscr.io/linuxserver/sonarr:latest
+    restart: unless-stopped
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${DOCKER_CONFIG_DIR}/sonarr/config:/config
+      - ${DOCKER_MEDIA_DIR}:/data/media:ro
+    ports:
+      - "8989:8989"
+    networks:
+      - cf-tunnel
 networks:
   # This creates a private virtual network for your containers to talk to each other.
   cf-tunnel:
