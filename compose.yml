@@ -88,7 +88,7 @@ services:
     container_name: qbittorrent
     image: lscr.io/linuxserver/qbittorrent:latest
     restart: unless-stopped
-    network_mode: "service:vpn"
+    network_mode: "service:gluetun"
     depends_on:
       gluetun:
         condition: service_healthy
@@ -137,7 +137,7 @@ services:
     container_name: prowlarr
     image: lscr.io/linuxserver/prowlarr:latest
     restart: unless-stopped
-    network_mode: "service:vpn"
+    network_mode: "service:gluetun"
     depends_on:
       gluetun:
         condition: service_healthy
