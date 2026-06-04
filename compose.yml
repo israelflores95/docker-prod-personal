@@ -60,6 +60,47 @@ services:
     networks:
       - cf-tunnel
 
+  # --- 4. VPN & DOWNLOADERS ---
+  # Gluetun routes traffic for qBittorrent and Prowlarr through ProtonVPN.
+  # This provides a "Kill Switch" - if the VPN drops, the apps lose internet.
+  gluetun:
+    image: qmcgaw/gluetun
+    container_name: vpn
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=protonvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${PROTONVPN_WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=Iceland # You can change this to your preferred country
+    ports:
+      - "8080:8080" # qBittorrent Web UI
+      - "9696:9696" # Prowlarr Web UI
+      - "6881:6881" # qBittorrent Torrent Port
+      - "6881:6881/udp"
+    networks:
+      - cf-tunnel
+    restart: unless-stopped
+
+  qbittorrent:
+    container_name: qbittorrent
+    image: lscr.io/linuxserver/qbittorrent:latest
+    restart: unless-stopped
+    network_mode: "service:vpn"
+    depends_on:
+      gluetun:
+        condition: service_healthy
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - ${DOCKER_CONFIG_DIR}/qbittorrent/config:/config
+      - ${DOCKER_MEDIA_DIR}/downloads:/downloads
+
   sonarr:
     container_name: sonarr
     image: lscr.io/linuxserver/sonarr:latest
@@ -70,7 +111,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${DOCKER_CONFIG_DIR}/sonarr/config:/config
-      - ${DOCKER_MEDIA_DIR}:/data/media:ro
+      - ${DOCKER_MEDIA_DIR}:/data/media
     ports:
       - "8989:8989"
     networks:
@@ -86,26 +127,26 @@ services:
       - TZ=${TZ}
     volumes:
       - ${DOCKER_CONFIG_DIR}/radarr/config:/config
-      - ${DOCKER_MEDIA_DIR}:/data/media:ro
+      - ${DOCKER_MEDIA_DIR}:/data/media
     ports:
       - "7878:7878"
     networks:
       - cf-tunnel
 
-  prawlarr:
-    container_name: prawlarr
-    image: lscr.io/linuxserver/prawlarr:latest
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
     restart: unless-stopped
+    network_mode: "service:vpn"
+    depends_on:
+      gluetun:
+        condition: service_healthy
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=${TZ}
     volumes:
-      - ${DOCKER_CONFIG_DIR}/prawlarr/config:/config
-    ports:
-      - "8080:8080"
-    networks:
-      - cf-tunnel
+      - ${DOCKER_CONFIG_DIR}/prowlarr/config:/config
 networks:
   # This creates a private virtual network for your containers to talk to each other.
   cf-tunnel:
