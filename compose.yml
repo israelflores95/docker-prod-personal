@@ -18,7 +18,7 @@ services:
   # since it proves domain ownership with a DNS TXT record, not a reachable port).
   traefik:
     container_name: traefik
-    image: traefik:v3.1
+    image: traefik:latest
     restart: unless-stopped
     command:
       - --providers.docker=true
