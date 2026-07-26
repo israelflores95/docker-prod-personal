@@ -12,7 +12,28 @@ services:
     networks:
       - cf-tunnel                        # Joins the private "room" to talk to other apps
 
-  # --- 2. DASHBOARD (HOMARR) ---
+  # --- 2. REVERSE PROXY (CADDY) ---
+  # Terminates HTTP/HTTPS for internal services and reverse-proxies them by name.
+  # Joins cf-tunnel so cloudflared can reach it, and so it can reach the other containers.
+  caddy:
+    container_name: caddy
+    image: caddy:latest
+    restart: unless-stopped
+    environment:
+      - DOMAIN=${DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ${DOCKER_CONFIG_DIR}/caddy/conf:/etc/caddy
+      - ${DOCKER_DATA_DIR}/caddy/site:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - cf-tunnel
+
+  # --- 3. DASHBOARD (HOMARR) ---
   # This is a website that gives you a nice UI to see all your other apps.
   homarr:
     container_name: homarr
@@ -21,7 +42,7 @@ services:
     volumes:
       # Volumes = "Memory". Without these, your settings vanish when the app restarts.
       # Left side: Folder on your computer | Right side: Folder inside the container
-      - /var/run/docker.sock:/var/run/docker.sock 
+      - /var/run/docker.sock:/var/run/docker.sock
       - ${DOCKER_CONFIG_DIR}/homarr/configs:/app/data/configs
       - ${DOCKER_CONFIG_DIR}/homarr/icons:/app/public/icons
       - ${DOCKER_DATA_DIR}/homarr/data:/data
@@ -41,7 +62,7 @@ services:
       retries: 3
       start_period: 30s
 
-  # --- 3. MEDIA SERVER (JELLYFIN) ---
+  # --- 4. MEDIA SERVER (JELLYFIN) ---
   # Jellyfin is a free and open-source media system.
   # We use the LinuxServer.io version because it handles file permissions very well.
   jellyfin:
@@ -60,7 +81,7 @@ services:
     networks:
       - cf-tunnel
 
-  # --- 4. VPN & DOWNLOADERS ---
+  # --- 5. VPN & DOWNLOADERS ---
   # Gluetun routes traffic for qBittorrent and Prowlarr through ProtonVPN.
   # This provides a "Kill Switch" - if the VPN drops, the apps lose internet.
   gluetun:
@@ -147,6 +168,11 @@ services:
       - TZ=${TZ}
     volumes:
       - ${DOCKER_CONFIG_DIR}/prowlarr/config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
+
 networks:
   # This creates a private virtual network for your containers to talk to each other.
   cf-tunnel:

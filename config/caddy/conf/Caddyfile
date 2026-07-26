@@ -1,0 +1,30 @@
+{
+	# Cloudflare Tunnel already terminates public HTTPS at the edge, so Caddy
+	# only needs to speak plain HTTP internally over cf-tunnel. Behind CGNAT,
+	# Caddy can't complete an ACME HTTP-01 challenge anyway.
+	auto_https off
+}
+
+dashboard.{$DOMAIN}:80 {
+	reverse_proxy homarr:7575
+}
+
+jellyfin.{$DOMAIN}:80 {
+	reverse_proxy jellyfin:8096
+}
+
+sonarr.{$DOMAIN}:80 {
+	reverse_proxy sonarr:8989
+}
+
+radarr.{$DOMAIN}:80 {
+	reverse_proxy radarr:7878
+}
+
+qbittorrent.{$DOMAIN}:80 {
+	reverse_proxy vpn:8080
+}
+
+prowlarr.{$DOMAIN}:80 {
+	reverse_proxy vpn:9696
+}
