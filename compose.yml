@@ -17,10 +17,12 @@ services:
   # Joins cf-tunnel so cloudflared can reach it, and so it can reach the other containers.
   caddy:
     container_name: caddy
-    image: caddy:latest
+    build:
+      context: ./caddy
     restart: unless-stopped
     environment:
       - DOMAIN=${DOMAIN}
+      - CLOUDFLARE_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
     ports:
       - "80:80"
       - "443:443"
