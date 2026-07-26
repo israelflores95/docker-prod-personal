@@ -33,6 +33,10 @@ services:
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
     environment:
       - CF_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
+      # Traefik's bundled Docker client can fail version negotiation against
+      # the socket and fall back to its oldest default (API 1.24), which
+      # newer daemons refuse. Pin it explicitly to skip that.
+      - DOCKER_API_VERSION=1.41
     ports:
       - "80:80"
       - "443:443"
