@@ -12,7 +12,37 @@ services:
     networks:
       - cf-tunnel                        # Joins the private "room" to talk to other apps
 
-  # --- 2. DASHBOARD (HOMARR) ---
+  # --- 2. REVERSE PROXY (TRAEFIK) ---
+  # Routes internal *.casa-flores.net hostnames to the right container and
+  # issues real HTTPS certs via Cloudflare's DNS-01 challenge (works behind CGNAT
+  # since it proves domain ownership with a DNS TXT record, not a reachable port).
+  traefik:
+    container_name: traefik
+    image: traefik:v3.1
+    restart: unless-stopped
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --certificatesresolvers.cloudflare.acme.email=${ACME_EMAIL}
+      - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.cloudflare.acme.dnschallenge=true
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+    environment:
+      - CF_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DOCKER_CONFIG_DIR}/traefik/letsencrypt:/letsencrypt
+    networks:
+      - cf-tunnel
+
+  # --- 3. DASHBOARD (HOMARR) ---
   # This is a website that gives you a nice UI to see all your other apps.
   homarr:
     container_name: homarr
@@ -21,7 +51,7 @@ services:
     volumes:
       # Volumes = "Memory". Without these, your settings vanish when the app restarts.
       # Left side: Folder on your computer | Right side: Folder inside the container
-      - /var/run/docker.sock:/var/run/docker.sock 
+      - /var/run/docker.sock:/var/run/docker.sock
       - ${DOCKER_CONFIG_DIR}/homarr/configs:/app/data/configs
       - ${DOCKER_CONFIG_DIR}/homarr/icons:/app/public/icons
       - ${DOCKER_DATA_DIR}/homarr/data:/data
@@ -33,6 +63,12 @@ services:
       - "7575:7575"  # Opens a "door" on your computer so you can visit http://localhost:7575
     networks:
       - cf-tunnel
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.dashboard.rule=Host(`dashboard.${DOMAIN}`)
+      - traefik.http.routers.dashboard.entrypoints=websecure
+      - traefik.http.routers.dashboard.tls.certresolver=cloudflare
+      - traefik.http.services.dashboard.loadbalancer.server.port=7575
     healthcheck:
       # Fixes the "unhealthy" status by checking the correct internal port
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:7575/api/health"]
@@ -41,7 +77,7 @@ services:
       retries: 3
       start_period: 30s
 
-  # --- 3. MEDIA SERVER (JELLYFIN) ---
+  # --- 4. MEDIA SERVER (JELLYFIN) ---
   # Jellyfin is a free and open-source media system.
   # We use the LinuxServer.io version because it handles file permissions very well.
   jellyfin:
@@ -59,8 +95,14 @@ services:
       - "8096:8096"
     networks:
       - cf-tunnel
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)
+      - traefik.http.routers.jellyfin.entrypoints=websecure
+      - traefik.http.routers.jellyfin.tls.certresolver=cloudflare
+      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
 
-  # --- 4. VPN & DOWNLOADERS ---
+  # --- 5. VPN & DOWNLOADERS ---
   # Gluetun routes traffic for qBittorrent and Prowlarr through ProtonVPN.
   # This provides a "Kill Switch" - if the VPN drops, the apps lose internet.
   gluetun:
@@ -83,6 +125,18 @@ services:
     networks:
       - cf-tunnel
     restart: unless-stopped
+    labels:
+      # qbittorrent and prowlarr share this container's network namespace
+      # (network_mode: "service:gluetun"), so Traefik routes to them here.
+      - traefik.enable=true
+      - traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${DOMAIN}`)
+      - traefik.http.routers.qbittorrent.entrypoints=websecure
+      - traefik.http.routers.qbittorrent.tls.certresolver=cloudflare
+      - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)
+      - traefik.http.routers.prowlarr.entrypoints=websecure
+      - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
 
   qbittorrent:
     container_name: qbittorrent
@@ -116,6 +170,12 @@ services:
       - "8989:8989"
     networks:
       - cf-tunnel
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)
+      - traefik.http.routers.sonarr.entrypoints=websecure
+      - traefik.http.routers.sonarr.tls.certresolver=cloudflare
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
 
   radarr:
     container_name: radarr
@@ -132,6 +192,12 @@ services:
       - "7878:7878"
     networks:
       - cf-tunnel
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)
+      - traefik.http.routers.radarr.entrypoints=websecure
+      - traefik.http.routers.radarr.tls.certresolver=cloudflare
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
 
   prowlarr:
     container_name: prowlarr
