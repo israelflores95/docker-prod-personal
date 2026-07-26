@@ -31,6 +31,10 @@ services:
       - --certificatesresolvers.cloudflare.acme.storage=/letsencrypt/acme.json
       - --certificatesresolvers.cloudflare.acme.dnschallenge=true
       - --certificatesresolvers.cloudflare.acme.dnschallenge.provider=cloudflare
+      # Bypass the local/LAN resolver for the propagation check - it's the
+      # same resolver doing split-horizon overrides for *.casa-flores.net,
+      # so it never sees the real _acme-challenge TXT record Cloudflare published.
+      - --certificatesresolvers.cloudflare.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
     environment:
       - CF_DNS_API_TOKEN=${CLOUDFLARE_DNS_API_TOKEN}
       # Traefik's bundled Docker client can fail version negotiation against
@@ -136,10 +140,12 @@ services:
       - traefik.http.routers.qbittorrent.rule=Host(`qbittorrent.${DOMAIN}`)
       - traefik.http.routers.qbittorrent.entrypoints=websecure
       - traefik.http.routers.qbittorrent.tls.certresolver=cloudflare
+      - traefik.http.routers.qbittorrent.service=qbittorrent
       - traefik.http.services.qbittorrent.loadbalancer.server.port=8080
       - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)
       - traefik.http.routers.prowlarr.entrypoints=websecure
       - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
+      - traefik.http.routers.prowlarr.service=prowlarr
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
 
   qbittorrent:
