@@ -133,6 +133,13 @@ services:
     networks:
       - cf-tunnel
     restart: unless-stopped
+    # Healthcheck to verify the VPN tunnel is active before starting dependents (qBittorrent/Prowlarr)
+    healthcheck:
+      test: ["CMD", "gluetun-entrypoint", "healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     labels:
       # qbittorrent and prowlarr share this container's network namespace
       # (network_mode: "service:gluetun"), so Traefik routes to them here.
