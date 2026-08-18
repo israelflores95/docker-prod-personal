@@ -157,6 +157,7 @@ services:
     depends_on:
       gluetun:
         condition: service_healthy
+    command: sh -c "sleep 120 && exec your-main-app-command"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -218,6 +219,7 @@ services:
     depends_on:
       gluetun:
         condition: service_healthy
+    command: sh -c "sleep 120 && exec your-main-app-command"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
